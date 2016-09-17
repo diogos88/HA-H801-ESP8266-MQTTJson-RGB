@@ -6,9 +6,7 @@ const char* mqtt_user = "user";
 const char* mqtt_password = "p4ssw0rd";
 
 // Password for update server
-const bool enableOTA = false;
-const char* username = "admin";
-const char* password = "";
+const char* otaPassword = "";
 
 // MQTT topics
 // state, brightness, rgb

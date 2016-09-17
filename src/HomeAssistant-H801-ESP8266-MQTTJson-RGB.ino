@@ -4,10 +4,11 @@
 //
 #include "Secrets.h"
 
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>   // Local WebServer used to serve the configuration portal
-#include <ESP8266mDNS.h>
+//#include <ESP8266WiFi.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+
 #include <WiFiManager.h>        // WiFi Configuration Magic
 #include <PubSubClient.h>       // MQTT m_client
 #include <WiFiUdp.h>
@@ -171,6 +172,7 @@ const char* JSON_LIGHT_COLOR_B = "b";
 const char* JSON_LIGHT_STATE = "state";
 const char* JSON_LIGHT_FLASH = "flash";
 const char* JSON_LIGHT_TRANSITION = "transition";
+const char* JSON_ESP_RESTART = "restart";
 
 const int MQTT_BUFFER_SIZE = JSON_OBJECT_SIZE(10);
 
@@ -179,6 +181,35 @@ WhiteState m_white1State;
 WhiteState m_white2State;
 
 unsigned int m_loopCount = 0;
+
+void setupOTA()
+{
+   ArduinoOTA.onStart([]() {
+      Serial1.println("OTA: Start");
+   });
+   ArduinoOTA.onEnd([]() {
+      Serial1.println("\nOTA: End");
+   });
+   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      Serial1.printf("OTA: Progress: %u%%\r", (progress / (total / 100)));
+   });
+   ArduinoOTA.onError([](ota_error_t error) {
+      Serial1.printf("OTA: Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial1.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial1.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial1.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial1.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial1.println("End Failed");
+   });
+
+   //ArduinoOTA.setPassword(otaPassword);
+   ArduinoOTA.begin();
+
+   MDNS.begin(myhostname);
+   m_httpUpdater.setup(&m_httpServer, "admin", otaPassword);
+   m_httpServer.begin();
+   MDNS.addService("http", "tcp", 80);
+}
 
 void setupWifi()
 {
@@ -190,14 +221,10 @@ void setupWifi()
    WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
    m_wifiManager.addParameter(&custom_mqtt_server);
 
-   WiFiManagerParameter custom_password("password", "password for updates", password, 40);
-   m_wifiManager.addParameter(&custom_password);
-
    m_wifiManager.setCustomHeadElement(chip_id);
    m_wifiManager.autoConnect();
 
    mqtt_server = custom_mqtt_server.getValue();
-   password = custom_password.getValue();
 
    Serial1.println("");
 
@@ -224,13 +251,7 @@ void setupWifi()
    digitalWrite(BOARD_RED_PIN, 1);
 
    // OTA
-   // do not start OTA server if no password has been set
-   if (password != "") {
-      MDNS.begin(myhostname);
-      m_httpUpdater.setup(&m_httpServer, username, password);
-      m_httpServer.begin();
-      MDNS.addService("http", "tcp", 80);
-   }
+   setupOTA();
 }
 
 void publishAllStates()
@@ -584,6 +605,9 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
    }
 
+   if (root.containsKey(JSON_ESP_RESTART))
+      ESP.restart();
+
    if (strcmp(topic, MQTT_LIGHT_RGB_COMMAND_TOPIC) == 0)
    {
       parseRGBState(m_rgbState, root);
@@ -675,6 +699,7 @@ void setup()
 void loop()
 {
    // process OTA updates
+   ArduinoOTA.handle();
    m_httpServer.handleClient();
 
    m_loopCount++;
