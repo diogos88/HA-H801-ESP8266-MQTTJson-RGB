@@ -525,8 +525,10 @@ void updateWhiteState(struct WhiteState& whiteState)
 
 void parseRGBState(struct RgbState& rgbState, JsonObject& root)
 {
-   if (root.containsKey(JSON_LIGHT_STATE))
-      rgbState.stateOn = (strcmp(root[JSON_LIGHT_STATE], LIGHT_ON) == 0);
+   rgbState.stateOn = (strcmp(root[JSON_LIGHT_STATE], LIGHT_ON) == 0);
+
+   if (!rgbState.stateOn)
+      rgbState.brightnessValue = 0;
 
    if (root.containsKey(JSON_LIGHT_COLOR))
    {
@@ -558,8 +560,10 @@ void parseRGBState(struct RgbState& rgbState, JsonObject& root)
 
 void parseWhiteState(struct WhiteState& whiteState, JsonObject& root)
 {
-   if (root.containsKey(JSON_LIGHT_STATE))
-      whiteState.stateOn = (strcmp(root[JSON_LIGHT_STATE], LIGHT_ON) == 0);
+   whiteState.stateOn = (strcmp(root[JSON_LIGHT_STATE], LIGHT_ON) == 0);
+
+   if (!whiteState.stateOn)
+      whiteState.brightnessValue = 0;
 
    if (root.containsKey(JSON_LIGHT_BRIGHTNESS))
       whiteState.brightness = root[JSON_LIGHT_BRIGHTNESS];
