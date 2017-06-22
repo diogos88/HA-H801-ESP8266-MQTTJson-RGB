@@ -202,7 +202,6 @@ void setupOTA()
       else if (error == OTA_END_ERROR) Serial1.println("End Failed");
    });
 
-   //ArduinoOTA.setPassword(otaPassword);
    ArduinoOTA.begin();
 
    MDNS.begin(myhostname);
@@ -222,7 +221,9 @@ void setupWifi()
    m_wifiManager.addParameter(&custom_mqtt_server);
 
    m_wifiManager.setCustomHeadElement(chip_id);
-   m_wifiManager.autoConnect();
+
+   if (!m_wifiManager.autoConnect(wifi_ssid, wifi_password))
+      m_wifiManager.autoConnect();
 
    mqtt_server = custom_mqtt_server.getValue();
 
@@ -248,7 +249,7 @@ void setupWifi()
    memcpy(MQTT_LIGHT_W2_STATE_TOPIC, chip_id, 8);
    memcpy(MQTT_LIGHT_W2_COMMAND_TOPIC, chip_id, 8);
 
-   digitalWrite(BOARD_RED_PIN, 1);
+   digitalWrite(BOARD_RED_PIN, HIGH);
 
    // OTA
    setupOTA();
@@ -320,7 +321,7 @@ void setWhite(struct WhiteState& whiteState, byte brightness, byte w)
 
 int calculateStep(int prevValue, int endValue) {
    int step = endValue - prevValue; // What's the overall gap?
-   if (step)                          // If its non-zero, 
+   if (step)                          // If its non-zero,
       step = 1020 / step;            //   divide by 1020
 
    return step;
@@ -628,9 +629,9 @@ void callback(char* topic, byte* payload, unsigned int length)
       publishWhiteState(m_white2State, MQTT_LIGHT_W2_STATE_TOPIC);
    }
 
-   digitalWrite(BOARD_GREEN_PIN, 0);
+   digitalWrite(BOARD_GREEN_PIN, LOW);
    delay(1);
-   digitalWrite(BOARD_GREEN_PIN, 1);
+   digitalWrite(BOARD_GREEN_PIN, HIGH);
 }
 
 void reconnect()
@@ -689,8 +690,8 @@ void setup()
 
    pinMode(BOARD_GREEN_PIN, OUTPUT);
    pinMode(BOARD_RED_PIN, OUTPUT);
-   digitalWrite(BOARD_RED_PIN, 0);
-   digitalWrite(BOARD_GREEN_PIN, 1);
+   digitalWrite(BOARD_RED_PIN, LOW);
+   digitalWrite(BOARD_GREEN_PIN, HIGH);
 
    analogWriteRange(255);
 
@@ -702,11 +703,12 @@ void setup()
 
 void loop()
 {
+   m_loopCount++;
+
    // process OTA updates
    ArduinoOTA.handle();
    m_httpServer.handleClient();
 
-   m_loopCount++;
    if (!m_client.connected()) {
       reconnect();
    }

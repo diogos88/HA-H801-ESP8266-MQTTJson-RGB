@@ -1,5 +1,8 @@
 #pragma once
 
+const char* wifi_ssid = "SSID";
+const char* wifi_password = "p4ssw0rd";
+
 const char* mqtt_server = "127.0.0.1";
 const int mqtt_port = 1883;
 const char* mqtt_user = "user";
